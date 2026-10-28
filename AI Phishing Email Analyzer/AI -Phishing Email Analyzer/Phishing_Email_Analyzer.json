@@ -1,0 +1,227 @@
+{
+  "name": "IOC-Phishing Email Analyzer",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Phishing Email Analyzer",
+        "formDescription": "Paste the suspicious email below to check whether it is a phishing email.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Email Subject"
+            },
+            {
+              "fieldLabel": "Email Body",
+              "fieldType": "textarea"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        0
+      ],
+      "id": "bd61175e-761c-4ff8-bcb6-d4b319e50194",
+      "name": "On form submission",
+      "webhookId": "918a83d7-346a-4163-afbe-70925fb76914"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a cybersecurity phishing email analyzer.\n\nAnalyze the email below.\n\nSubject:\n{{ $json[\"Email Subject\"] }}\n\nBody:\n{{ $json[\"Email Body\"] }}\n\nInstructions:\n- Decide whether the email is phishing or legitimate.\n- If the email contains urgency, fake login pages, HTTP links, requests for credentials, suspicious domains, spelling mistakes, or impersonation, classify it as phishing.\n- Extract all URLs.\n- Return ONLY valid JSON.\n- Do NOT include markdown.\n- Do NOT wrap the JSON in ```.\n\nOutput format:\n\n{\n  \"isPhishing\": true,\n  \"risk\": \"High\",\n  \"reason\": \"Short explanation\",\n  \"suspiciousIndicators\": [\n    \"Urgent language\",\n    \"Suspicious URL\"\n  ],\n  \"urls\": [\n    \"http://fake-bank-login.com\"\n  ]\n}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        224,
+        0
+      ],
+      "id": "7d62f606-34b2-4953-8d3f-3b25e9c5d70f",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        96,
+        208
+      ],
+      "id": "ca27f0df-4f87-429a-9dc8-c6891c0fa807",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "R19tGDplhIQd8RoT",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "24acc805-6cf4-4fc8-9daa-70af38ea64dd",
+              "leftValue": "={{ JSON.parse($('AI Agent').item.json.output).isPhishing }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        592,
+        0
+      ],
+      "id": "9f47254d-91c7-4cea-bda8-5610ff33a46c",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "sendTo": "harini.b2024csecs@sece.ac.in",
+        "subject": "⚠️ Phishing Email Detected",
+        "emailType": "text",
+        "message": "=A phishing email has been detected.\n\nSubject:\n{{ $('On form submission').item.json[\"Email Subject\"] }}\n\nRisk:\n{{ $('AI Agent').item.json.risk }}\n\nReason:\n{{ $('AI Agent').item.json.reason }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        816,
+        -96
+      ],
+      "id": "0af892aa-bef5-4447-864f-3cec5e4ebb14",
+      "name": "Send a message",
+      "webhookId": "5b2633d8-4cda-4870-aeef-6ff32b33002d",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "al66zxhm8ZbL6nzA",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "harini.b2024csecs@sece.ac.in",
+        "subject": "✅ Email Analysis Result",
+        "emailType": "text",
+        "message": "=The submitted email appears legitimate.\n\nSubject:\n{{ $('On form submission').item.json[\"Email Subject\"] }}\n\nAnalysis:\n{{ $('AI Agent').item.json.output }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        816,
+        96
+      ],
+      "id": "c001fe6f-b39f-4050-b7ee-06ca343c4c0b",
+      "name": "Send a message1",
+      "webhookId": "c134e90f-bb15-42ef-887f-3e29c7f40565",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "al66zxhm8ZbL6nzA",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "pinData": {
+    "On form submission": [
+      {
+        "json": {
+          "Email Subject": "URGENT! Verify Your Bank Account",
+          "Email Body": "Dear Customer,\r\n\r\nYour account has been suspended.\r\n\r\nClick below immediately.\r\n\r\nhttp://fake-bank-login.com\r\n\r\nFailure to verify within 24 hours will permanently disable your account.\r\n\r\nRegards,\r\nSupport Team",
+          "submittedAt": "2026-08-07T21:01:25.031+05:30",
+          "formMode": "test"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "triggerCount": 0,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}
